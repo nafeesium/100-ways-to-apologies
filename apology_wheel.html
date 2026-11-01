@@ -1,0 +1,986 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#070913">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;700&display=swap">
+<title>100 Ways to Say Sorry</title>
+<style>
+  :root {
+    --sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, "Segoe UI", Roboto, "Helvetica Neue", Helvetica, Arial, sans-serif;
+    --serif: ui-serif, "New York", Georgia, "Times New Roman", serif;
+    --s: 1;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0;
+    height: 100%;
+    overflow: hidden;
+    background: #070913;
+    -webkit-font-smoothing: antialiased;
+    -webkit-tap-highlight-color: transparent;
+    -webkit-user-select: none;
+    user-select: none;
+  }
+  canvas {
+    position: fixed;
+    left: 0;
+    top: 0;
+    display: block;
+    touch-action: none;
+    outline: none;
+  }
+
+  /* the text in the middle is plain HTML, so it stays sharp and animates on the GPU */
+  #stage {
+    position: fixed;
+    width: 0;
+    height: 0;
+    transform: scale(var(--s));
+    pointer-events: none;
+  }
+  #stage > * {
+    position: absolute;
+    left: 0;
+    transform: translate(-50%, -50%);
+  }
+  .eyebrow {
+    white-space: nowrap;
+    padding-left: .5em;
+    font: 700 10.67px/1 var(--sans);
+    letter-spacing: .5em;
+    text-transform: uppercase;
+    color: rgb(189, 151, 92);
+    opacity: 0;
+    transition: opacity 1.4s cubic-bezier(.16, 1, .3, 1);
+  }
+  #t1 { top: -72px; }
+  #t2 { top: -54px; letter-spacing: .72em; padding-left: .72em; }
+  #stage.on .eyebrow { opacity: 1; }
+
+  #phrase { top: -2px; width: 250px; height: 150px; }
+  .p {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    font: italic 400 25px/1.24 var(--serif);
+    text-wrap: balance;
+    animation: pin .9s cubic-bezier(.16, 1, .3, 1) both;
+    will-change: transform, opacity, filter;
+  }
+  .p.out { animation: pout .5s cubic-bezier(.4, 0, 1, 1) both; }
+
+  .rule {
+    top: 52px;
+    width: 0;
+    height: 1px;
+    background: rgba(219, 176, 102, .55);
+    transition: width 1.2s cubic-bezier(.16, 1, .3, 1) .3s;
+  }
+  #stage.on .rule { width: 52px; }
+
+  #counter { top: 72px; width: 120px; height: 18px; }
+  .c {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding-left: .2em;
+    font: 700 12px/1 var(--sans);
+    letter-spacing: .2em;
+    font-variant-numeric: tabular-nums;
+    color: rgb(168, 135, 85);
+    animation: cin .7s cubic-bezier(.16, 1, .3, 1) both;
+  }
+  .c.out { animation: pout .4s ease both; }
+
+  @keyframes pin {
+    from { opacity: 0; transform: translateY(14px) scale(.97); filter: blur(10px); }
+    to   { opacity: 1; transform: none; filter: blur(0); }
+  }
+  @keyframes cin {
+    from { opacity: 0; transform: translateY(6px); filter: blur(3px); }
+    to   { opacity: 1; transform: none; filter: blur(0); }
+  }
+  @keyframes pout {
+    to { opacity: 0; transform: translateY(-10px) scale(.99); filter: blur(8px); }
+  }
+
+  /* skip / replay button and the hint under the wheel */
+  #ui {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: max(22px, env(safe-area-inset-bottom));
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 14px;
+    pointer-events: none;
+  }
+  #hint {
+    font: 500 11px/1 var(--sans);
+    letter-spacing: .16em;
+    text-transform: uppercase;
+    color: rgba(255, 240, 224, .46);
+    opacity: 0;
+    transition: opacity 1.4s ease;
+  }
+  #hint.show { opacity: 1; }
+  #btn {
+    pointer-events: none;
+    appearance: none;
+    -webkit-appearance: none;
+    border: 1px solid rgba(255, 255, 255, .14);
+    background: rgba(255, 255, 255, .07);
+    color: rgba(255, 244, 230, .84);
+    font: 500 13px/1 var(--sans);
+    letter-spacing: .02em;
+    padding: 11px 20px;
+    border-radius: 999px;
+    -webkit-backdrop-filter: blur(18px) saturate(1.4);
+    backdrop-filter: blur(18px) saturate(1.4);
+    cursor: pointer;
+    opacity: 0;
+    transform: translateY(6px);
+    transition: opacity .7s ease, transform .7s cubic-bezier(.16, 1, .3, 1),
+                background .25s ease, border-color .25s ease;
+  }
+  #btn.show { opacity: 1; transform: none; pointer-events: auto; }
+  #btn:hover { background: rgba(255, 255, 255, .13); border-color: rgba(255, 255, 255, .24); }
+  #btn:active { transform: scale(.96); }
+  #btn:focus-visible { outline: 2px solid rgba(219, 176, 102, .85); outline-offset: 3px; }
+
+  /* credit, bottom right */
+  #credit {
+    position: fixed;
+    right: max(26px, env(safe-area-inset-right));
+    bottom: max(20px, env(safe-area-inset-bottom));
+    font-family: "Caveat", "Snell Roundhand", "Bradley Hand", "Segoe Script", "Comic Sans MS", cursive;
+    font-size: 20px;
+    font-weight: 500;
+    line-height: 1.2;
+    white-space: nowrap;
+    opacity: 0;
+    animation: creditIn 2.4s cubic-bezier(.16, 1, .3, 1) 1.6s forwards;
+  }
+  #credit .line {
+    color: rgba(255, 236, 214, .66);
+    text-shadow: 0 1px 14px rgba(7, 9, 19, .85);
+    transition: color .4s ease;
+  }
+  #credit:hover .line, #credit:focus-within .line { color: rgba(255, 242, 228, .94); }
+  #credit .love { color: rgba(255, 170, 190, .92); }
+  #credit .heart {
+    display: inline-block;
+    width: .72em;
+    height: .72em;
+    margin-left: .08em;
+    vertical-align: -.04em;
+    fill: #ff7d9d;
+    filter: drop-shadow(0 0 6px rgba(255, 125, 157, .55));
+    transform-origin: 50% 60%;
+    animation: beat 2.6s ease-in-out infinite;
+  }
+  #credit a {
+    position: relative;
+    display: inline-block;
+    color: inherit;
+    font-weight: 700;
+    text-decoration: underline;
+    text-decoration-color: rgba(219, 176, 102, .75);
+    text-decoration-thickness: 1.5px;
+    text-underline-offset: 4px;
+    cursor: pointer;
+    outline: none;
+    -webkit-tap-highlight-color: transparent;
+    transition: text-decoration-color .3s ease, color .3s ease;
+  }
+  #credit a:hover, #credit a:focus-visible {
+    color: rgb(255, 226, 168);
+    text-decoration-color: rgb(235, 196, 122);
+  }
+  #credit a:focus-visible { border-radius: 4px; box-shadow: 0 0 0 2px rgba(219, 176, 102, .8); }
+  #credit .tip {
+    position: absolute;
+    right: 0;
+    bottom: calc(100% + 12px);
+    padding: 8px 13px;
+    border-radius: 999px;
+    border: 1px solid rgba(255, 255, 255, .16);
+    background: rgba(28, 22, 46, .62);
+    -webkit-backdrop-filter: blur(18px) saturate(1.5);
+    backdrop-filter: blur(18px) saturate(1.5);
+    box-shadow: 0 8px 28px rgba(0, 0, 0, .35);
+    color: rgba(255, 244, 230, .95);
+    font: 500 12.5px/1 var(--sans);
+    font-style: normal;
+    letter-spacing: .01em;
+    text-decoration: none;
+    white-space: nowrap;
+    pointer-events: none;
+    opacity: 0;
+    transform: translateY(6px) scale(.96);
+    transform-origin: 85% 100%;
+    transition: opacity .25s ease, transform .45s cubic-bezier(.16, 1, .3, 1);
+  }
+  #credit a:hover .tip, #credit a:focus-visible .tip { opacity: 1; transform: none; }
+
+  @keyframes creditIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: none; }
+  }
+  @keyframes beat {
+    0%, 100% { transform: scale(1); }
+    14%      { transform: scale(1.2); }
+    28%      { transform: scale(1); }
+    42%      { transform: scale(1.13); }
+    70%      { transform: scale(1); }
+  }
+
+  @media (max-width: 640px) {
+    #credit { left: 0; right: 0; text-align: center; bottom: max(14px, env(safe-area-inset-bottom)); }
+    #ui { bottom: calc(max(14px, env(safe-area-inset-bottom)) + 40px); }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    #credit { animation-duration: .01s !important; animation-delay: 0s !important; }
+    #credit .heart { animation: none; }
+    .p, .c { animation-duration: .01s !important; }
+    .p.out, .c.out { animation-duration: .01s !important; }
+  }
+</style>
+</head>
+<body>
+<canvas id="c" role="img" aria-label="A wheel of one hundred ways to say sorry"></canvas>
+
+<div id="stage">
+  <div class="eyebrow" id="t1">100 ways to say</div>
+  <div class="eyebrow" id="t2">Sorry</div>
+  <div id="phrase"></div>
+  <div class="rule"></div>
+  <div id="counter"></div>
+</div>
+
+<div id="ui">
+  <div id="hint">Drag to spin &nbsp;&middot;&nbsp; Touch any apology</div>
+  <button id="btn" type="button">Skip intro</button>
+</div>
+
+<div id="credit">
+  <span class="line">made with <span class="love">love</span><svg class="heart" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg> by
+    <!-- to add your link, swap the # in href below for your URL -->
+    <a id="credit-link" href="#">Ahmad Abrar Nafees<span class="tip" role="tooltip">Also known as Nafeesium</span></a></span>
+</div>
+
+<script>
+(() => {
+'use strict';
+
+// 100 ways to say sorry.
+// Went through a lot of versions of this one. The colours run from cool indigo
+// (the hurt) to warm gold (the making up), and the middle reads each apology out.
+
+// all of these numbers were tuned by eye, so nudge them if it feels off
+
+const TAU = Math.PI * 2;
+const HALF = Math.PI / 2;
+const REDUCED = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+const START_DELAY = 0.35;      // seconds before the first apology shows up
+const GAP = 0.144;             // seconds between apologies (the Python version used 9 ticks of 16ms)
+const R0 = 182;                // where the spokes start
+const R_MAX = 342;             // where the longest spoke may end
+const RING = 366;
+const DRIFT = 0.0375;          // how fast the wheel turns on its own, radians per second
+
+const SANS = '-apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, "Segoe UI", Roboto, "Helvetica Neue", Helvetica, Arial, sans-serif';
+
+const BG_TOP = [0.028, 0.035, 0.105];
+const BG_BOT = [0.17, 0.075, 0.19];
+const BGC    = [0.06, 0.05, 0.13];
+const CREAM  = [1.0, 0.95, 0.88];
+const GOLD   = [0.86, 0.69, 0.40];
+const FLASH  = [1.0, 0.97, 0.92];
+
+const STOPS = [
+  [0.42, 0.52, 0.98],   // indigo
+  [0.68, 0.48, 0.96],   // violet
+  [0.96, 0.46, 0.68],   // rose
+  [1.00, 0.62, 0.45],   // coral
+  [1.00, 0.82, 0.46],   // gold
+];
+
+const APOLOGIES = [
+  "I'm so sorry", "I was wrong", "Please forgive me",
+  "I take full responsibility", "That was my mistake",
+  "I should have listened", "I owe you an apology",
+  "I didn't mean to hurt you", "I'm sorry I let you down", "I messed up",
+  "I'm truly sorry", "I regret my words", "I was selfish",
+  "I should have been there", "I'm sorry for yelling",
+  "I'm sorry I wasn't honest", "I was not thinking of you",
+  "I handled it badly", "I'm ashamed of how I acted", "You deserved better",
+  "I'm sorry I broke my promise", "I'm sorry I forgot",
+  "I put my pride first", "I'm sorry I didn't call", "I was unfair to you",
+  "I judged too quickly", "I'm sorry I dismissed you",
+  "I should have trusted you", "I'm sorry I interrupted", "I wasn't fair",
+  "I made it about me", "I'm sorry I was distant",
+  "I'm sorry I was late again", "I ignored what you needed",
+  "I let my temper win", "I said things I didn't mean",
+  "I'm sorry I made you worry", "I didn't see your side",
+  "I should have asked first", "I'm sorry I stayed silent",
+  "I took you for granted", "I'm sorry I was careless",
+  "My words were unkind", "I'm sorry for the silence",
+  "I was too proud to say it", "I'm sorry I wasn't listening",
+  "I hurt someone I love", "I'm sorry I broke your trust",
+  "I should have said it sooner", "I'm sorry it took so long",
+  "I'm sorry I made excuses", "No excuses, just sorry",
+  "I want to make it right", "Let me make it up to you",
+  "I'm here to listen now", "I'll do better, I promise",
+  "I'll be more patient", "I'm learning from this",
+  "Tell me how to fix it", "I miss you, and I'm sorry",
+  "You matter more than winning", "I can't lose you over this",
+  "I'm sorry for the hurt", "I'm sorry for the tears",
+  "I wish I could undo it", "I'd take it back if I could",
+  "I'm sorry for my harsh words", "I was scared and lashed out",
+  "I let stress speak for me", "I'm sorry I wasn't kind",
+  "You didn't deserve that", "It was never your fault",
+  "I'm sorry I blamed you", "I'm sorry I compared us",
+  "I'm sorry I overreacted", "I misunderstood you",
+  "I wasn't there for you", "I should have shown up",
+  "I'm sorry I missed it", "I forgot what mattered",
+  "I was busy, not present", "I took it out on you",
+  "I'm sorry for the bad timing", "I made you feel small",
+  "I'm sorry I wasn't gentle", "I'm sorry I held a grudge",
+  "I let it go on too long", "I should have spoken first",
+  "I'm sorry I lied", "I'm sorry I hid the truth",
+  "You can trust me again", "Give me another chance", "I'm ready to talk",
+  "I'm sorry, and I mean it", "I'm sorry from my heart",
+  "Forgive me when you can", "I'm grateful for you",
+  "I love you, and I'm sorry", "Can we start over?", "I'm sorry. Always.",
+];
+const N = APOLOGIES.length;
+if (N !== 100) throw new Error('Expected 100 phrases, got ' + N);
+
+// small helpers I kept needing
+const limit = (v, lo = 0, hi = 1) => Math.max(lo, Math.min(hi, v));
+const softstep = u => { u = limit(u); return u * u * (3 - 2 * u); };
+const easeOut = u => 1 - Math.pow(1 - u, 3);
+const chase = (dt, rate) => 1 - Math.exp(-dt * rate);
+const wrap = (x, m) => ((x % m) + m) % m;
+const blend = (a, b, k) => a.map((p, i) => p + (b[i] - p) * k);
+const byte = v => Math.floor(limit(v) * 255);
+const hex = c => '#' + c.map(v => byte(v).toString(16).padStart(2, '0')).join('');
+const rgba = (c, a) => `rgba(${byte(c[0])},${byte(c[1])},${byte(c[2])},${limit(a)})`;
+const colorAt = k => {
+  k = limit(k) * (STOPS.length - 1);
+  const i = Math.min(Math.floor(k), STOPS.length - 2);
+  return blend(STOPS[i], STOPS[i + 1], k - i);
+};
+function mulberry32(a) {
+  return function () {
+    a |= 0; a = a + 0x6D2B79F5 | 0;
+    let t = Math.imul(a ^ a >>> 15, 1 | a);
+    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  };
+}
+const stable = mulberry32(7);
+const stableBetween = (a, b) => a + (b - a) * stable();
+const stablePick = arr => arr[Math.floor(stable() * arr.length)];
+
+// page elements
+const cv = document.getElementById('c');
+const ctx = cv.getContext('2d');
+if (!ctx) {
+  document.body.textContent = "Your browser can't draw this one. Sorry. (Yes, the irony.)";
+  return;
+}
+const stage = document.getElementById('stage');
+const phraseHost = document.getElementById('phrase');
+const counterHost = document.getElementById('counter');
+const hint = document.getElementById('hint');
+const btn = document.getElementById('btn');
+
+// sizing
+let W = 0, H = 0, dpr = 1, scale = 1, lw = 800, lh = 800;
+let bgCanvas = null;
+let stars = [];
+let spokePx = 12;
+let SPOKE_FONT = '500 12px ' + SANS;
+
+function buildBackground() {
+  bgCanvas = document.createElement('canvas');
+  bgCanvas.width = cv.width;
+  bgCanvas.height = cv.height;
+  const b = bgCanvas.getContext('2d');
+  b.setTransform(dpr * scale, 0, 0, dpr * scale, cv.width / 2, cv.height / 2);
+  // dusk gradient: 80 bands, drawn once and reused every frame
+  const BANDS = 80;
+  const span = lh * (840 / 800);
+  const top = -span / 2;
+  for (let i = 0; i < BANDS; i++) {
+    const y0 = top + span * i / BANDS;
+    b.fillStyle = hex(blend(BG_TOP, BG_BOT, Math.pow(i / (BANDS - 1), 1.4)));
+    b.fillRect(-lw / 2 - 20, y0, lw + 40, span / BANDS + 1);
+  }
+  // darken the corners a little
+  b.setTransform(1, 0, 0, 1, 0, 0);
+  const vg = b.createRadialGradient(cv.width / 2, cv.height / 2, Math.min(cv.width, cv.height) * 0.3,
+                                    cv.width / 2, cv.height / 2, Math.hypot(cv.width, cv.height) / 2);
+  vg.addColorStop(0, 'rgba(0,0,0,0)');
+  vg.addColorStop(1, 'rgba(2,3,10,0.45)');
+  b.fillStyle = vg;
+  b.fillRect(0, 0, cv.width, cv.height);
+}
+
+function buildStars() {
+  stars = [];
+  const count = Math.round(90 * Math.max(1, (lw * lh) / (800 * 800)) * 1.3);
+  for (let n = 0; n < count; n++) {
+    const x = stableBetween(-lw / 2, lw / 2), y = stableBetween(-lh / 2, lh / 2);
+    if (Math.hypot(x, y) < 372) continue;
+    stars.push({
+      x, y,
+      sz: stablePick([0.8, 1, 1, 1.4]),
+      b: stableBetween(0.15, 0.5),
+      depth: stableBetween(0.3, 1),
+      phase: stableBetween(0, TAU),
+      speed: stableBetween(0.5, 1.6),
+    });
+  }
+}
+
+function measureFont() {
+  let px = 12.5;
+  while (px > 9) {
+    ctx.font = `500 ${px}px ${SANS}`;
+    let widest = 0;
+    for (const p of APOLOGIES) widest = Math.max(widest, ctx.measureText(p).width);
+    if (widest <= R_MAX - R0) break;
+    px -= 0.25;
+  }
+  spokePx = px;
+  SPOKE_FONT = `500 ${px}px ${SANS}`;
+}
+
+function resize() {
+  dpr = Math.min(window.devicePixelRatio || 1, 2);
+  // the window can report 0x0 for a moment on load, and an empty canvas crashes drawImage
+  W = window.innerWidth || document.documentElement.clientWidth || 800;
+  H = window.innerHeight || document.documentElement.clientHeight || 800;
+  cv.width = Math.max(1, Math.round(W * dpr));
+  cv.height = Math.max(1, Math.round(H * dpr));
+  cv.style.width = W + 'px';
+  cv.style.height = H + 'px';
+  scale = Math.min(W, H) / 800;
+  lw = W / scale;
+  lh = H / scale;
+  document.documentElement.style.setProperty('--s', scale);
+  stage.style.left = (W / 2) + 'px';
+  stage.style.top = (H / 2) + 'px';
+  buildBackground();
+  buildStars();
+  measureFont();
+}
+
+// spokes
+const sorries = APOLOGIES.map((text, i) => ({
+  text,
+  th: HALF - TAU * i / N,            // start at 12 o'clock, go clockwise
+  color: colorAt(i / (N - 1)),
+  born: null,
+  hi: 0,
+}));
+
+// state
+let wallClock = 0;                 // real time, seconds
+let playTime = 0;                    // seconds since the intro (re)started
+let shown = 0, nextAt = 0, gap = GAP;
+let finishedAt = null;
+let skipping = false;
+let reading = null, readingSince = 0;
+let moodColor = STOPS[0].slice(), moodTarget = STOPS[0].slice();
+let rot = 0, vel = 0, drift = -DRIFT;
+let paused = false;
+let arcProg = 0;
+let focusF = 0, focusStr = 0, focusTarget = 0, tapHoldEnd = 0;
+let stageOn = false, skipBtnShown = false;
+let runGen = 0;
+let nextShoot = null;
+const ripples = [];
+const shootingStars = [];
+const mouseShift = { x: 0, y: 0 };
+const pointer = { x: 0, y: 0, inside: false, type: 'mouse' };
+let dragging = false;
+let drag = null;
+let cursorState = '';
+
+// the text in the middle
+function fadeTextIn(host, cls, text, color, shadow) {
+  Array.from(host.children).forEach(ch => {
+    if (!ch.classList.contains('out')) {
+      ch.classList.add('out');
+      setTimeout(() => ch.remove(), 560);
+    }
+  });
+  const el = document.createElement('div');
+  el.className = cls;
+  const span = document.createElement('span');
+  span.textContent = text;
+  el.appendChild(span);
+  if (color) el.style.color = color;
+  if (shadow) el.style.textShadow = shadow;
+  host.appendChild(el);
+  while (host.children.length > 5) host.firstChild.remove();
+}
+
+function readAloud(i) {
+  reading = i;
+  readingSince = wallClock;
+  const c = sorries[i].color;
+  moodTarget = c;
+  fadeTextIn(phraseHost, 'p', APOLOGIES[i], hex(blend(CREAM, c, 0.18)),
+         `0 0 34px ${rgba(c, 0.35)}, 0 2px 26px rgba(0,0,0,.35)`);
+  fadeTextIn(counterHost, 'c', 'N\u00b0 ' + String(i + 1).padStart(3, '0'));
+}
+
+function clearMiddle() {
+  [phraseHost, counterHost].forEach(host => {
+    Array.from(host.children).forEach(ch => {
+      if (!ch.classList.contains('out')) {
+        ch.classList.add('out');
+        setTimeout(() => ch.remove(), 560);
+      }
+    });
+  });
+}
+
+// button and haptics
+function setBtn(label, show) {
+  if (label) btn.textContent = label;
+  btn.classList.toggle('show', show);
+}
+function haptic(ms) {
+  try { if (navigator.vibrate) navigator.vibrate(ms); } catch (e) {}
+}
+
+function startOver() {
+  runGen++;
+  playTime = 0;
+  shown = 0;
+  gap = GAP;
+  nextAt = START_DELAY + GAP;
+  finishedAt = null;
+  skipping = false;
+  reading = null;
+  arcProg = 0;
+  stageOn = false;
+  skipBtnShown = false;
+  ripples.length = 0;
+  sorries.forEach(p => { p.born = null; p.hi = 0; });
+  stage.classList.remove('on');
+  hint.classList.remove('show');
+  setBtn(null, false);
+  clearMiddle();
+}
+
+function skip() {
+  if (finishedAt !== null || skipping) return;
+  skipping = true;
+  gap = 0.014;
+  nextAt = playTime + 0.03;
+  setBtn(null, false);
+}
+
+function onDone() {
+  // TODO: maybe a soft sound when the last one lands
+  ripples.push(wallClock);
+  ripples.push(wallClock + 0.28);
+  const gen = runGen;
+  setTimeout(() => {
+    if (gen !== runGen) return;
+    setBtn('Replay', true);
+    hint.classList.add('show');
+    setTimeout(() => { if (gen === runGen) hint.classList.remove('show'); }, 7500);
+  }, 1300);
+}
+
+btn.addEventListener('click', () => {
+  if (finishedAt === null) skip();
+  else { startOver(); haptic(8); }
+});
+
+// mouse and touch
+function angleOf(clientX, clientY) {
+  const px = (clientX - W / 2) / scale, py = (clientY - H / 2) / scale;
+  return Math.atan2(-py, px);
+}
+function radiusOf(clientX, clientY) {
+  return Math.hypot((clientX - W / 2) / scale, (clientY - H / 2) / scale);
+}
+function focusFromAngle(pa) {
+  return wrap((HALF + rot - pa) * N / TAU, N);
+}
+function normAngle(d) {
+  while (d > Math.PI) d -= TAU;
+  while (d < -Math.PI) d += TAU;
+  return d;
+}
+
+cv.addEventListener('pointerdown', e => {
+  try { cv.setPointerCapture(e.pointerId); } catch (err) {}
+  pointer.x = e.clientX; pointer.y = e.clientY; pointer.type = e.pointerType; pointer.inside = true;
+  dragging = true;
+  drag = { pa: angleOf(e.clientX, e.clientY), t: e.timeStamp, t0: e.timeStamp,
+           sx: e.clientX, sy: e.clientY, moved: 0, v: 0 };
+  vel = 0;
+});
+
+cv.addEventListener('pointermove', e => {
+  pointer.x = e.clientX; pointer.y = e.clientY; pointer.type = e.pointerType;
+  pointer.inside = e.pointerType === 'mouse' || dragging;
+  if (!dragging || !drag) return;
+  const pa = angleOf(e.clientX, e.clientY);
+  const d = normAngle(pa - drag.pa);
+  rot += d;
+  const dt = (e.timeStamp - drag.t) / 1000;
+  if (dt > 0.0005) drag.v += (limit(d / dt, -12, 12) - drag.v) * 0.35;
+  drag.pa = pa;
+  drag.t = e.timeStamp;
+  drag.moved = Math.max(drag.moved, Math.hypot(e.clientX - drag.sx, e.clientY - drag.sy));
+});
+
+function endDrag(e, cancelled) {
+  if (!dragging) return;
+  dragging = false;
+  const d = drag;
+  drag = null;
+  if (e.pointerType !== 'mouse') pointer.inside = false;
+  if (cancelled || !d) return;
+  const isTap = d.moved < 8 && (e.timeStamp - d.t0) < 450;
+  if (isTap) {
+    tapAt(e.clientX, e.clientY, e.pointerType);
+  } else {
+    vel = (e.timeStamp - d.t) > 90 ? 0 : limit(d.v, -9, 9);
+  }
+}
+cv.addEventListener('pointerup', e => endDrag(e, false));
+cv.addEventListener('pointercancel', e => endDrag(e, true));
+cv.addEventListener('pointerleave', e => { if (e.pointerType === 'mouse' && !dragging) pointer.inside = false; });
+
+function tapAt(x, y, type) {
+  const r = radiusOf(x, y);
+  if (r < R0 - 40 || r > R_MAX + 70) return;
+  if (finishedAt === null) return;
+  const f = focusFromAngle(angleOf(x, y));
+  const idx = ((Math.round(f) % N) + N) % N;
+  focusF = idx;
+  if (type !== 'mouse') tapHoldEnd = wallClock + 1.6;
+  if (idx !== reading) { readAloud(idx); haptic(6); }
+}
+
+window.addEventListener('keydown', e => {
+  if (e.target && (e.target.tagName === 'BUTTON' || e.target.tagName === 'A')) return;
+  if (e.key === 'r' || e.key === 'R') { startOver(); }
+  else if (e.key === ' ') { paused = !paused; e.preventDefault(); }
+  else if (e.key === 'ArrowLeft') { vel += 1.4; }
+  else if (e.key === 'ArrowRight') { vel -= 1.4; }
+  else if (e.key === 's' || e.key === 'S') { skip(); }
+});
+
+window.addEventListener('resize', resize);
+
+// one step of the animation
+function stepForward(dt) {
+  playTime += dt;
+
+  if (!stageOn && playTime > 0.13) { stage.classList.add('on'); stageOn = true; }
+  if (!skipBtnShown && playTime > 1.5 && finishedAt === null && !skipping) { setBtn('Skip intro', true); skipBtnShown = true; }
+
+  // show the next apology when its time comes
+  while (shown < N && playTime >= nextAt) {
+    sorries[shown].born = nextAt;
+    if (!skipping || shown === N - 1) readAloud(shown);
+    shown++;
+    nextAt += gap;
+    if (shown === N) { finishedAt = playTime; onDone(); }
+  }
+
+  // ease the ring toward the real progress instead of jumping in steps
+  const arcTarget = shown / N;
+  arcProg += (arcTarget - arcProg) * chase(dt, 9);
+  if (Math.abs(arcTarget - arcProg) < 0.0002) arcProg = arcTarget;
+
+  // the wheel turns by itself, plus whatever momentum you gave it
+  const dMul = REDUCED ? 0.4 : 1;
+  const driftTarget = paused ? 0 : -(DRIFT + (shown >= N ? DRIFT : 0)) * dMul;
+  drift += (driftTarget - drift) * chase(dt, 1.5);
+  if (!dragging) {
+    rot += (drift + vel) * dt;
+    vel *= Math.exp(-dt * 1.5);
+    if (Math.abs(vel) < 0.0005) vel = 0;
+  }
+
+  // hover: apologies near the cursor swell, a bit like the Dock
+  let active = false;
+  let overWheel = false;
+  if (pointer.inside && pointer.type === 'mouse') {
+    const r = radiusOf(pointer.x, pointer.y);
+    if (r > R0 - 26 && r < R_MAX + 46) {
+      overWheel = true;
+      if (!dragging) {
+        active = true;
+        focusF = focusFromAngle(angleOf(pointer.x, pointer.y));
+      }
+    }
+  }
+  focusTarget = (active || tapHoldEnd > wallClock) ? 1 : 0;
+  focusStr += (focusTarget - focusStr) * chase(dt, 9);
+
+  const wantCursor = dragging ? 'grabbing' : (overWheel ? 'grab' : 'default');
+  if (wantCursor !== cursorState) { cv.style.cursor = wantCursor; cursorState = wantCursor; }
+
+  // hovering over one also puts it in the middle
+  if (active && finishedAt !== null) {
+    const idx = ((Math.round(focusF) % N) + N) % N;
+    if (idx !== reading && wallClock - readingSince > 0.09) readAloud(idx);
+  }
+
+  // once everything is shown, swap the middle apology every few seconds
+  if (finishedAt !== null && !paused && focusTarget === 0 && !dragging &&
+      wallClock - readingSince > 3.4 && playTime - finishedAt > 1.0) {
+    let k;
+    do { k = Math.floor(Math.random() * N); } while (k === reading);
+    readAloud(k);
+  }
+
+  // the apology in the middle glows a little on the wheel too
+  for (let i = 0; i < N; i++) {
+    const p = sorries[i];
+    p.hi += ((i === reading ? 1 : 0) - p.hi) * chase(dt, 6);
+  }
+
+  // the glow in the middle drifts toward the colour of the current apology
+  moodColor = moodColor.map((v, k) => v + (moodTarget[k] - v) * chase(dt, 3));
+
+  // stars shift slightly with the mouse
+  const pt = (pointer.inside && pointer.type === 'mouse' && !REDUCED)
+    ? { x: pointer.x / W - 0.5, y: pointer.y / H - 0.5 } : { x: 0, y: 0 };
+  mouseShift.x += (pt.x - mouseShift.x) * chase(dt, 2.5);
+  mouseShift.y += (pt.y - mouseShift.y) * chase(dt, 2.5);
+
+  // every so often, a shooting star
+  if (!REDUCED) {
+    if (nextShoot === null) nextShoot = wallClock + 7 + Math.random() * 6;
+    if (wallClock > nextShoot) {
+      const ang = (22 + Math.random() * 16) * Math.PI / 180;
+      const sp = 620 + Math.random() * 260;
+      shootingStars.push({
+        x: -lw / 2 + Math.random() * lw * 0.6,
+        y: -lh / 2 + Math.random() * lh * 0.45,
+        vx: Math.cos(ang) * sp, vy: Math.sin(ang) * sp, sp,
+        t0: wallClock, life: 0.9 + Math.random() * 0.4,
+      });
+      nextShoot = wallClock + 9 + Math.random() * 10;
+    }
+  }
+}
+
+// drawing
+function blob(x, y, R, color, alpha) {
+  const g = ctx.createRadialGradient(x, y, 0, x, y, R);
+  g.addColorStop(0, rgba(color, alpha));
+  g.addColorStop(1, rgba(color, 0));
+  ctx.fillStyle = g;
+  ctx.fillRect(-lw / 2 - 10, -lh / 2 - 10, lw + 20, lh + 20);
+}
+
+function paint() {
+  if (!bgCanvas || !bgCanvas.width || !bgCanvas.height) return;
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.globalAlpha = 1;
+  ctx.drawImage(bgCanvas, 0, 0);
+  ctx.setTransform(dpr * scale, 0, 0, dpr * scale, cv.width / 2, cv.height / 2);
+
+  const intro = softstep(playTime / 2.0);
+
+  // slow coloured haze behind everything
+  const bigR = Math.max(lw, lh) * 0.75;
+  blob(Math.sin(wallClock * 0.07) * lw * 0.22 - lw * 0.15, Math.cos(wallClock * 0.05) * lh * 0.18 - lh * 0.2,
+       bigR, blend(STOPS[0], moodColor, 0.35), 0.10 * intro);
+  blob(Math.cos(wallClock * 0.06) * lw * 0.22 + lw * 0.2, Math.sin(wallClock * 0.045) * lh * 0.2 + lh * 0.25,
+       bigR, blend(STOPS[2], moodColor, 0.35), 0.075 * intro);
+
+  // stars twinkle, shift with the mouse, and orbit very slowly
+  const sr = wallClock * 0.004, cs = Math.cos(sr), sn = Math.sin(sr);
+  ctx.fillStyle = hex(CREAM);
+  for (const s of stars) {
+    const k = limit(s.b * (0.85 + 0.45 * Math.sin(wallClock * s.speed + s.phase)), 0, 1);
+    const x = s.x * cs - s.y * sn - mouseShift.x * 26 * s.depth;
+    const y = s.x * sn + s.y * cs - mouseShift.y * 26 * s.depth;
+    ctx.globalAlpha = k;
+    ctx.beginPath();
+    ctx.arc(x, y, s.sz, 0, TAU);
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+
+  // draw the shooting stars
+  for (let i = shootingStars.length - 1; i >= 0; i--) {
+    const s = shootingStars[i];
+    const age = wallClock - s.t0, u = age / s.life;
+    if (u >= 1) { shootingStars.splice(i, 1); continue; }
+    const headX = s.x + s.vx * age, headY = s.y + s.vy * age;
+    const len = 150;
+    const tx = headX - s.vx / s.sp * len, ty = headY - s.vy / s.sp * len;
+    const a = Math.sin(Math.PI * u) * 0.75;
+    const g = ctx.createLinearGradient(tx, ty, headX, headY);
+    g.addColorStop(0, rgba(FLASH, 0));
+    g.addColorStop(1, rgba(FLASH, a));
+    ctx.strokeStyle = g;
+    ctx.lineWidth = 1.4;
+    ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(tx, ty); ctx.lineTo(headX, headY); ctx.stroke();
+  }
+
+  // glow in the middle, tinted by the apology being read
+  const breathe = 1 + 0.12 * Math.sin(wallClock * 0.8);
+  const gk = softstep((playTime - 0.1) / 1.2) * breathe;
+  const heartGlow = ctx.createRadialGradient(0, 0, 0, 0, 0, R0 + 10);
+  heartGlow.addColorStop(0, rgba(moodColor, 0.17 * gk));
+  heartGlow.addColorStop(0.55, rgba(moodColor, 0.07 * gk));
+  heartGlow.addColorStop(1, rgba(moodColor, 0));
+  ctx.fillStyle = heartGlow;
+  ctx.beginPath(); ctx.arc(0, 0, R0 + 10, 0, TAU); ctx.fill();
+
+  // the three thin gold rings
+  const ringK = softstep(playTime / 1.4);
+  ctx.globalAlpha = ringK;
+  ctx.lineWidth = 1;
+  for (const [rad, k] of [[R0 - 14, 0.35], [R0 - 19, 0.12], [RING, 0.18]]) {
+    ctx.strokeStyle = hex(blend(BG_TOP, GOLD, k));
+    ctx.beginPath(); ctx.arc(0, 0, rad, 0, TAU); ctx.stroke();
+  }
+  ctx.globalAlpha = 1;
+
+  // progress ring, indigo to gold, with a bright dot at the end
+  if (arcProg > 0.0008) {
+    const a0 = -HALF, a1 = a0 + arcProg * TAU;
+    ctx.save();
+    ctx.lineCap = 'round';
+    ctx.lineWidth = 3;
+    if (ctx.createConicGradient) {
+      const g = ctx.createConicGradient(a0, 0, 0);
+      STOPS.forEach((c, i) => g.addColorStop(i / (STOPS.length - 1) * 0.999, hex(c)));
+      g.addColorStop(1, hex(STOPS[STOPS.length - 1]));
+      ctx.strokeStyle = g;
+    } else {
+      ctx.strokeStyle = hex(GOLD);
+    }
+    ctx.shadowColor = rgba(GOLD, 0.55);
+    ctx.shadowBlur = 14 * dpr * scale;
+    ctx.beginPath(); ctx.arc(0, 0, RING, a0, a1); ctx.stroke();
+    ctx.restore();
+
+    if (arcProg < 0.999) {
+      const tipX = RING * Math.cos(a1), tipY = RING * Math.sin(a1);
+      const tipGlow = ctx.createRadialGradient(tipX, tipY, 0, tipX, tipY, 11);
+      tipGlow.addColorStop(0, rgba(FLASH, 0.95));
+      tipGlow.addColorStop(0.35, rgba(GOLD, 0.45));
+      tipGlow.addColorStop(1, rgba(GOLD, 0));
+      ctx.fillStyle = tipGlow;
+      ctx.beginPath(); ctx.arc(tipX, tipY, 11, 0, TAU); ctx.fill();
+    }
+  }
+
+  // ripples when the last apology lands (looks good, took a few tries)
+  for (let i = ripples.length - 1; i >= 0; i--) {
+    const u = (wallClock - ripples[i]) / 1.6;
+    if (u >= 1) { ripples.splice(i, 1); continue; }
+    if (u < 0) continue;
+    ctx.strokeStyle = rgba(GOLD, (1 - u) * 0.55);
+    ctx.lineWidth = 0.6 + 1.4 * (1 - u);
+    ctx.beginPath(); ctx.arc(0, 0, RING + 4 + easeOut(u) * 90, 0, TAU); ctx.stroke();
+  }
+
+  // the spokes
+  ctx.font = SPOKE_FONT;
+  ctx.textBaseline = 'middle';
+  const sweepIdx = wrap(playTime * 13.75, N);
+  const sweepK = finishedAt !== null ? softstep((playTime - finishedAt) / 1.5) : 0;
+  for (let i = 0; i < N; i++) {
+    const p = sorries[i];
+    if (p.born === null) continue;
+    const u = limit((playTime - p.born) / 0.64);
+    const e = easeOut(u);
+
+    let d = Math.abs(i - focusF); d = Math.min(d, N - d);
+    const mag = Math.exp(-Math.pow(d / 2.3, 2)) * focusStr;
+
+    let glow = 0;
+    if (sweepK > 0) {
+      let ds = Math.abs(i - sweepIdx); ds = Math.min(ds, N - ds);
+      glow = Math.exp(-Math.pow(ds / 3.0, 2)) * 0.65 * sweepK;
+    }
+    const pop = u < 0.6 ? 0.9 * Math.sin(Math.PI * limit((u - 0.1) / 0.5)) : 0;
+    const flash = Math.max(glow, pop, mag * 0.6, p.hi * 0.45);
+
+    const a = wrap(p.th + rot, TAU);
+    const rr = R0 + (1 - e) * 18 + mag * 12 + p.hi * 5;
+    const x = rr * Math.cos(a), y = -rr * Math.sin(a);
+    const flip = a > HALF && a < 3 * HALF;
+
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(-(flip ? a + Math.PI : a));
+    const sc = (0.94 + 0.06 * e) * (1 + 0.2 * mag + 0.06 * p.hi);
+    ctx.scale(sc, sc);
+    ctx.textAlign = flip ? 'right' : 'left';
+    ctx.globalAlpha = e;
+    ctx.fillStyle = hex(blend(blend(BGC, p.color, 0.82), FLASH, flash));
+    if (flash > 0.3) {
+      ctx.shadowColor = rgba(p.color, 0.9 * flash);
+      ctx.shadowBlur = 16 * flash * dpr * scale;
+    }
+    ctx.fillText(p.text, 0, 0);
+    ctx.restore();
+  }
+  ctx.globalAlpha = 1;
+}
+
+// loop
+let last = null;
+function everyFrame(ts) {
+  wallClock = ts / 1000;
+  // the window size can settle after load or change later, so rebuild when it does
+  const cw = window.innerWidth || W, ch = window.innerHeight || H;
+  if (cw !== W || ch !== H) resize();
+  if (last === null) last = wallClock;
+  const dt = Math.min(wallClock - last, 0.05);
+  last = wallClock;
+  stepForward(dt);
+  paint();
+  requestAnimationFrame(everyFrame);
+}
+
+// the credit link does nothing until you give it a real href
+const creditLink = document.getElementById('credit-link');
+creditLink.addEventListener('click', e => {
+  if (creditLink.getAttribute('href') === '#') e.preventDefault();
+});
+
+resize();
+startOver();
+requestAnimationFrame(everyFrame);
+})();
+</script>
+</body>
+</html>
